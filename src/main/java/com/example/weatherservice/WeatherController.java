@@ -23,7 +23,7 @@ public class WeatherController {
     private WeatherProvider weatherProvider;
 
     @GetMapping("/")
-    public String getWeather() throws UnsupportedEncodingException, SignatureException {
+    public void getWeather() throws UnsupportedEncodingException, SignatureException {
 
         String url = weatherProvider.diaryWeatherURL("beijing", "zh-Hans", "c", "0", "5");
         System.out.println(url);
@@ -37,12 +37,12 @@ public class WeatherController {
 
         try (Response response = client.newCall(request).execute()) {
             System.out.println(Objects.requireNonNull(response.body()).string());
-            return Objects.requireNonNull(response.body()).string();
+            // return Objects.requireNonNull(response.body()).string();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return url;
+        // return url;
     }
 
 }

@@ -19,13 +19,13 @@ import java.util.Date;
 @Component
 public class WeatherProvider {
 
-    @Value("weatherAPI")
+    @Value("${weatherAPI}")
     private String DAILY_WEATHER_URL;
 
-    @Value("weatherAPI.publicKey")
+    @Value("${weatherAPI.publicKey}")
     private String WEATHER_API_PUBLIC_KEY;
 
-    @Value("weatherAPI.privateKey")
+    @Value("${weatherAPI.privateKey}")
     private String WEATHER_API_PRIVATE_KEY;
 
     private String generateSignature(String data, String key) throws SignatureException {
