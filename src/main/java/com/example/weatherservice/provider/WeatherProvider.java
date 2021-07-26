@@ -1,4 +1,4 @@
-package com.example.weatherservice;
+package com.example.weatherservice.provider;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -10,7 +10,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
 import java.util.Base64;
-import java.util.Date;
 
 /**
  * @author Haiwei Lu
@@ -39,7 +38,6 @@ public class WeatherProvider {
             // compute the hmac on input data bytes
             byte[] rawHmac = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
             result = new String(Base64.getEncoder().encode(rawHmac));
-            // result = new sun.misc.BASE64Encoder().encode(rawHmac);
         }
         catch (Exception e) {
             throw new SignatureException("Failed to generate HMAC : " + e.getMessage());
@@ -49,12 +47,12 @@ public class WeatherProvider {
 
     /**
      * Generate the URL to get diary weather
-     * @param location
-     * @param language
-     * @param unit
-     * @param start
-     * @param days
-     * @return
+     * @param location  获取天气的位置
+     * @param language  结果显示的语言
+     * @param unit      温度的单位
+     * @param start     起始日期
+     * @param days      获取天气的天数
+     * @return url      返回一个 URL 字符串
      */
     public String diaryWeatherURL(
             String location,
