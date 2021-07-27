@@ -3,8 +3,8 @@ package com.example.weatherservice.controller;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.example.weatherservice.provider.WeatherProvider;
 import com.example.weatherservice.model.Weather;
+import com.example.weatherservice.provider.WeatherProvider;
 import net.sourceforge.pinyin4j.PinyinHelper;
 import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType;
 import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
@@ -14,7 +14,6 @@ import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombi
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,8 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.SignatureException;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,8 +32,12 @@ import java.util.Objects;
 @RestController
 public class WeatherController {
 
+    private final WeatherProvider weatherProvider;
+
     @Autowired
-    private WeatherProvider weatherProvider;
+    public WeatherController(WeatherProvider weatherProvider) {
+        this.weatherProvider = weatherProvider;
+    }
 
     @GetMapping("/{location}")
     public void fetchWeather(
@@ -60,7 +61,6 @@ public class WeatherController {
 
             JSONObject resultsJson= weatherJson.getJSONArray("results")
                     .getJSONObject(0);
-
 
             JSONArray dailyArray = resultsJson.getJSONArray("daily");
             System.out.println(dailyArray);
@@ -88,12 +88,11 @@ public class WeatherController {
         // return url;
     }
 
-    @GetMapping("/{message}")
+    @GetMapping("/test/{message}")
     public void testResponse(@PathVariable(value = "message") String message) {
         System.out.println(message);
     }
 
-    @NotNull
     private String getPinyin(String location) throws BadHanyuPinyinOutputFormatCombination {
         HanyuPinyinOutputFormat format = new HanyuPinyinOutputFormat();
         // 设置格式为小写
@@ -104,11 +103,14 @@ public class WeatherController {
         format.setVCharType(HanyuPinyinVCharType.WITH_V);
 
         char[] chars = location.toCharArray();
-        String result = "";
+        StringBuilder result = new StringBuilder();
         for (char c : chars) {
-             result += PinyinHelper.toHanyuPinyinStringArray(c, format)[0];
+            // 判断 c 是否为中文字符,汉字在UTF-8的位置基本位于[0x4e00, 0x9fa5]
+            if (c >= 0x4e00 &&  c <= 0x9fa5) {
+                result.append(PinyinHelper.toHanyuPinyinStringArray(c, format)[0]);
+            }
         }
-        return result;
+        return result.toString();
     }
 
 }
