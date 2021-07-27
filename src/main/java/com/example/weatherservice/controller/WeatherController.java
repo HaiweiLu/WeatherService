@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.example.weatherservice.model.Weather;
+import com.example.weatherservice.payload.WeatherResponse;
 import com.example.weatherservice.provider.WeatherProvider;
 import net.sourceforge.pinyin4j.PinyinHelper;
 import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType;
@@ -14,6 +15,7 @@ import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombi
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.SignatureException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -40,7 +43,7 @@ public class WeatherController {
     }
 
     @GetMapping("/{location}")
-    public void fetchWeather(
+    public WeatherResponse fetchWeather(
             @PathVariable(value = "location") String location)
             throws UnsupportedEncodingException, SignatureException, BadHanyuPinyinOutputFormatCombination {
 
@@ -57,42 +60,61 @@ public class WeatherController {
         try (Response response = client.newCall(request).execute()) {
             String weatherString = Objects.requireNonNull(response.body()).string();
             // TODO 如果返回中没有包含正确的信息即 result, 要进行异常处理
-            JSONObject weatherJson = JSONObject.parseObject(weatherString);
+            List<WeatherResponse> weatherResponses = getWeatherResponses(weatherString);
 
-            JSONObject resultsJson= weatherJson.getJSONArray("results")
-                    .getJSONObject(0);
-
-            JSONArray dailyArray = resultsJson.getJSONArray("daily");
-            System.out.println(dailyArray);
-
-            List<Weather> weathers = JSON.parseArray(dailyArray.toJSONString(), Weather.class);
-            for (Weather weather : weathers) {
-                System.out.println("Date: " + weather.getDate());
-                System.out.println("Day status: " + weather.getText_day());
-                System.out.println("Night status: " + weather.getText_night());
-                System.out.println("temperature: " + weather.getHigh() + "C");
-            }
-
-
-            System.out.println(resultsJson.getJSONObject("location").getString("name"));
-
-            // Date lastTime = resultsJson.getDate("last_update");
-
-
-            // System.out.println(Objects.requireNonNull(response.body()).string());
-            // return Objects.requireNonNull(response.body()).string();
+            return weatherResponses.get(0);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        // return url;
+        return new WeatherResponse();
     }
 
+    @NotNull
+    private List<WeatherResponse> getWeatherResponses(String weatherString) {
+        JSONObject weatherJson = JSONObject.parseObject(weatherString);
+
+        JSONObject resultsJson= weatherJson.getJSONArray("results")
+                .getJSONObject(0);
+
+        JSONArray dailyArray = resultsJson.getJSONArray("daily");
+        System.out.println(dailyArray);
+
+        List<WeatherResponse> weatherResponses = new ArrayList<>();
+
+        List<Weather> weathers = JSON.parseArray(dailyArray.toJSONString(), Weather.class);
+        for (Weather weather : weathers) {
+            WeatherResponse weatherResponse = new WeatherResponse();
+
+            weatherResponse.setTime(weather.getDate());
+            weatherResponse.setLocation(
+                    resultsJson.getJSONObject("location").getString("name"));
+            weatherResponse.setDayWeather(weather.getText_day());
+            weatherResponse.setNightWeather(weather.getText_night());
+            weatherResponse.setHighTemperature(weather.getHigh());
+            weatherResponse.setLowTemperature(weather.getLow());
+            weatherResponse.setHumidity(weather.getHumidity());
+            weatherResponse.setRainfall(weather.getRainfall());
+            weatherResponse.setWindDirectionDegree(weather.getWind_direction_degree());
+            weatherResponse.setWindScale(weather.getWind_scale());
+
+            weatherResponses.add(weatherResponse);
+        }
+        return weatherResponses;
+    }
+
+    /**
+     * 使用该函数测试是否成功接收 go-cqhttp 的信息
+     *
+     * @param message 信息
+     */
     @GetMapping("/test/{message}")
-    public void testResponse(@PathVariable(value = "message") String message) {
-        System.out.println(message);
+    public String testResponse(@PathVariable(value = "message") String message) {
+
+        return String.format("Successful, message: %s", message);
     }
 
+    @NotNull
     private String getPinyin(String location) throws BadHanyuPinyinOutputFormatCombination {
         HanyuPinyinOutputFormat format = new HanyuPinyinOutputFormat();
         // 设置格式为小写
