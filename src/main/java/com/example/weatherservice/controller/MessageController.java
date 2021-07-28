@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
 import java.util.Objects;
 
@@ -48,40 +50,42 @@ public class MessageController {
         // 处理非正常转发(比如心跳信息)
         try {
             jsonParam.getString("raw_message");
+
+            Sender sender = parseStringService.parseJsonToString(jsonParam);
+
+            StringBuilder message = new StringBuilder();
+            if (Objects.equals(sender.getDemand(), "")) {
+                message.append("暂时没有找到哦,你试试发送 广州的天气 哦");
+            } else if (sender.getUserId() != null) {
+                WeatherResponse weatherResponse = weatherProvider.getDailyWeather(sender.getDemand());
+                message.append(sender.getDemand())
+                        .append(": \\r\\n")
+                        .append(" 白天天气状况: \\r\\n")
+                        .append(weatherResponse.getDayWeather())
+                        .append(" 晚上天气状况: \\r\\n")
+                        .append(weatherResponse.getNightWeather())
+                        .append(" 最高温度: ")
+                        .append(weatherResponse.getHighTemperature())
+                        .append(" 度\\r\\n")
+                        .append(" 最低温度: ")
+                        .append(weatherResponse.getLowTemperature())
+                        .append(" 度\\r\\n");
+            }
+
+            OkHttpClient client = new OkHttpClient();
+
+            String url = forwardUrl + "user_id=" + sender.getUserId()
+                    + "&message=" + message.toString();
+            Request request = new Request.Builder()
+                    .url(URLEncoder.encode(url, StandardCharsets.UTF_8))
+                    .build();
+            try (Response response = client.newCall(request).execute()) {
+                System.out.println(Objects.requireNonNull(response.body()).string());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } catch (Exception e) {
             return null;
-        }
-
-        Sender sender = parseStringService.parseJsonToString(jsonParam);
-
-        StringBuilder message = new StringBuilder();
-        if (Objects.equals(sender.getDemand(), "")) {
-            message.append("暂时没有找到哦,你试试发送 广州的天气 哦");
-        } else if (sender.getUserId() != null) {
-            WeatherResponse weatherResponse = weatherProvider.getDailyWeather(sender.getDemand());
-            message.append(sender.getDemand())
-                    .append(": ")
-                    .append("白天天气状况: ")
-                    .append(weatherResponse.getDayWeather())
-                    .append("晚上天气状况: ")
-                    .append(weatherResponse.getNightWeather())
-                    .append("最高温度: ")
-                    .append(weatherResponse.getHighTemperature())
-                    .append("最低温度: ")
-                    .append(weatherResponse.getLowTemperature());
-        }
-
-        OkHttpClient client = new OkHttpClient();
-
-        String url = forwardUrl + "user_id=" + sender.getUserId()
-                + "&message=" + message.toString();
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        try (Response response = client.newCall(request).execute()) {
-            System.out.println(Objects.requireNonNull(response.body()).string());
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         return null;
